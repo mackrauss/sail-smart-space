@@ -1,0 +1,483 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" layout="absolute" width="1000" height="700" backgroundColor="0x111111" creationComplete="init()" verticalScrollPolicy="off" horizontalScrollPolicy="off" xmlns:local="*">
+	<mx:Script>
+    	<![CDATA[
+    		import flash.utils.clearInterval;
+    		import flash.utils.setInterval;
+    		import caurina.transitions.Tweener;
+    		import mx.events.IndexChangedEvent;
+    		import mx.core.UIComponent;
+    		import com.adobe.xml.syndication.rss.Item20;
+    		import com.adobe.xml.syndication.rss.RSS20;
+    		import com.adobe.utils.XMLUtil;
+    		import mx.flash.UIMovieClip;
+			import mx.core.DragSource;
+			import mx.managers.DragManager;
+			import mx.events.DragEvent;
+			import mx.collections.ArrayCollection;
+			import mx.controls.Image;
+			import com.adobe.viewsource.ViewSource;
+
+			private var draggedObject:DisplayObject;
+			private var offsetX:Number;
+			private var offsetY:Number;
+			
+			[Bindable]
+			private var gWidth:Number = 1000;
+			
+			[Bindable]
+			private var gHeight:Number = 700;
+			
+			[Bindable]
+			private var lHeight:Number = (2*gHeight)/3;
+			
+			private var loader:URLLoader;
+			
+			private var keyCode:String = "";
+			
+			private var nextSlot:Number = 0;
+			private var stars:ArrayCollection = new ArrayCollection();
+			
+			private var finding:Finding;
+			private var finding1:Finding1;
+			private var finding2:Finding2;
+			private var finding3:Finding3;
+			private var finding4:Finding4;
+			
+			private var inter:Number;
+			private var origPt1:Point;
+			private var origPt2:Point;
+			
+			private var pictures:Array = new Array("leirkar1.jpg","leirkar2.jpg","leirkar3.jpg","leirkar4.jpg","leirkar5.jpg","leirkar6.jpg","leirkar7.jpg","leirkar8.jpg","leirkar9.jpg",
+			"1053848670_b02c37cdc9_o.jpg","1389974624_e8eb39963e_b.jpg","3317361236_24b0074eeb_o.jpg","3829257945_10614505a7_b.jpg","nøkkel1.jpg"
+			,"perler1.jpg","perler2.jpg","perler3.jpg","perler4.jpg","perler5.jpg","perler6.jpg","perler7.jpg","perler8.jpg","perler9.jpg","perler10.jpg","perler11.jpg","perler12.jpg"
+			,"spenne1.jpg","spenne2.jpg","spenne3.jpg","spenne4.jpg","spenne5.jpg","spenne6.jpg","spenne7.jpg","spenne8.jpg","spenne9.jpg","spenne10.jpg","spenne11.jpg","spenne12.jpg","spenne13.jpg"
+			,"spenne14.jpg","spenne15.jpg","spenne16.jpg","spenne17.jpg","spenne18.jpg","spenne19.jpg","spenne20.jpg","spenne21.jpg");
+			
+			private function init():void {
+				//set stage properties and add listeners
+				this.systemManager.stage.scaleMode = StageScaleMode.NO_SCALE;
+				this.systemManager.stage.align = StageAlign.TOP_LEFT;
+				this.systemManager.stage.addEventListener(Event.RESIZE, updateGUI);
+				this.systemManager.stage.addEventListener(KeyboardEvent.KEY_DOWN,keyDownListener);
+				this.systemManager.stage.addEventListener(KeyboardEvent.KEY_UP,keyUpListener);
+				
+				//this.systemManager.stage.addEventListener(TouchEvent.MOUSE_DOWN,stageDown);
+				
+				if (this.stage){
+					TUIO.init(this.stage,'localhost',3000,'',true);
+                }
+                
+                this.callLater(callTUIOInit);
+				//dest.addChild(drawLine());
+				
+				buildRepository();	
+				//createStar(1);	
+				//createStar(2);	
+				//createStar(3);	
+				//createStar(4);	
+				//createStar(5);	
+			}	
+			
+			//on window resize, we update the graphical components' dimensions and regenerate the positions of images
+			private function updateGUI(event:Event):void {
+				gWidth = this.systemManager.stage.stageWidth;
+				gHeight = this.systemManager.stage.stageHeight;
+				lHeight = (2*gHeight)/3;
+				dest.width = gWidth;
+				dest.height = gHeight;
+				canTop.width = gWidth;
+				canTop.height = lHeight;
+				canBot.width = gWidth;
+				canBot.height = gHeight-lHeight;
+				canBot.y = lHeight;
+				repositionChildren(dest.getChildren());
+			}
+			
+			//depending on type, reposition images and stars according to new window dimensions
+			private function repositionChildren(arr:Array):void {
+				for(var i:Number = 0; i<arr.length; i++) {
+					if((arr[i].toString()).indexOf("mosaic0.dest.Image") != -1) {
+						arr[i].x = Math.floor(Math.random() * (1+(gWidth-130)-20)) + 20;
+						arr[i].y = Math.floor(Math.random() * (1+(gHeight-130)-(lHeight+20))) + (lHeight+20);
+					}
+					
+					if((arr[i].toString()).indexOf("mosaic0.dest.Finding") != -1) {
+						arr[i].x = Math.floor(Math.random() * (1+(gWidth-510)-20)) + 20;
+						arr[i].y = Math.floor(Math.random() * (1+(lHeight-510)-20)) + 20;
+					}
+				}
+			}
+			
+			//iterate through the array of images and place them randomly on the repo section
+			private function buildRepository():void {
+				var im:Image;
+				for(var i:Number=0; i<pictures.length; i++) {
+					im = new Image();
+					im.source = "assets/"+pictures[i];
+					im.width = 110;
+					im.height = 110;
+					im.alpha = 0.6;
+					im.x = Math.floor(Math.random() * (1+(gWidth-130)-20)) + 20;
+					im.y = Math.floor(Math.random() * (1+(gHeight-130)-(lHeight+20))) + (lHeight+20);
+					im.rotation = Math.floor(Math.random() * (1+10+10)) - 10;
+					im.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+					im.addEventListener(TouchEvent.MOUSE_UP, onTouchUp);
+					im.addEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);	
+					dest.addChild(im);
+				}
+			}
+			
+			private function keyUpListener(e:KeyboardEvent) {
+				trace("UP");
+			}
+			
+			private function keyDownListener(e:KeyboardEvent) {
+				keyCode = keyCode + e.charCode.toString();
+				trace(keyCode);
+				//167816791675167516691676: 078079075075069076: NOKKEL
+				//1683168016731678167816691672167416851676: 083080073078078069072074085076: SPINNEHJUL
+				//168016691682167616691682: 080069082076069082: PERLER
+				//16721669167516841669168316801669167816781669: 072069075084069083080069078078069: HEKTESPENNE
+				//1676166916731682167516651682: 076069073082075065082: LEIRKAR
+				
+				
+				if(keyCode == "076069073082075065082" || keyCode == "49") {
+					createStar(1);
+				}
+				
+				if(keyCode == "080069082076069082" || keyCode == "50") {
+					createStar(2);
+				}
+				
+				if(keyCode == "072069075084069083080069078078069" || keyCode == "51") {
+					createStar(3);	
+				}
+				
+				if(keyCode == "078079075075069076" || keyCode == "52") {
+					createStar(4);
+				}
+				
+				if(keyCode == "083080073078078069072074085076" || keyCode == "53") {
+					createStar(5);
+				}
+				
+			}
+			
+			private function createStar(num:Number):void {
+				switch(num) {
+					case 1:
+						finding = new Finding();
+						finding.x = getRandomXPos1();
+						finding.y = getRandomYPos1();
+						finding.visible = true;
+						finding.addEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+						finding.horizontalScrollPolicy = "off";
+						finding.verticalScrollPolicy = "off";
+						dest.addChild(finding);
+						stars.addItem({id:nextSlot, obj:finding, type:"finding"});
+						nextSlot++;
+						keyCode = "";
+						break;
+					case 2:
+						finding1 = new Finding1();
+						finding1.x = getRandomXPos1();
+						finding1.y = getRandomYPos1();
+						finding1.visible = true;
+						finding1.addEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+						finding1.horizontalScrollPolicy = "off";
+						finding1.verticalScrollPolicy = "off";
+						dest.addChild(finding1);
+						stars.addItem({id:nextSlot, obj:finding1, type:"finding1"});
+						nextSlot++;
+						keyCode = "";
+						break;
+					case 3:
+						finding2 = new Finding2();
+						finding2.x = getRandomXPos1();
+						finding2.y = getRandomYPos1();
+						finding2.visible = true;
+						finding2.addEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+						finding2.horizontalScrollPolicy = "off";
+						finding2.verticalScrollPolicy = "off";
+						dest.addChild(finding2);
+						stars.addItem({id:nextSlot, obj:finding2, type:"finding2"});
+						nextSlot++;
+						keyCode = "";
+						break;
+					case 4:
+						finding3 = new Finding3();
+						finding3.x = getRandomXPos1();
+						finding3.y = getRandomYPos1();
+						finding3.visible = true;
+						finding3.addEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+						finding3.horizontalScrollPolicy = "off";
+						finding3.verticalScrollPolicy = "off";
+						dest.addChild(finding3);
+						stars.addItem({id:nextSlot, obj:finding2, type:"finding3"});
+						nextSlot++;
+						keyCode = "";
+						break;
+					case 5:
+						finding4 = new Finding4();
+						finding4.x = getRandomXPos1();
+						finding4.y = getRandomYPos1();
+						finding4.visible = true;
+						finding4.addEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+						finding4.horizontalScrollPolicy = "off";
+						finding4.verticalScrollPolicy = "off";
+						dest.addChild(finding4);
+						stars.addItem({id:nextSlot, obj:finding2, type:"finding2"});
+						nextSlot++;
+						keyCode = "";
+						break;
+				}
+			}
+			
+			private function bringPhotoToFront(img:UIComponent):void {
+					dest.removeChild(img);
+                    dest.addChild(img);
+            }
+
+			
+			protected function callTUIOInit():void {
+                TUIO.init(this.stage,'localhost',3000,'',true);
+            }
+
+			private function onTouchUp(e:TouchEvent):void {
+				var img:UIComponent = e.currentTarget as UIComponent;
+				
+				var obj:Array;
+				if((img.toString()).indexOf("mosaic0.dest.Image") != -1) {
+					var pt:Point = new Point(img.x+img.width/2, img.y+img.height/2);
+					obj = getObjectsUnderPoint(pt);
+					for(var i:Number = 0; i<obj.length; i++) {
+						if((obj[i].toString()).indexOf("mosaic0.dest.canBot") != -1) {
+							img.alpha = 0.6;
+						}
+						else if((obj[i].toString()).indexOf("mosaic0.dest.canTop") != -1) {
+							img.alpha = 1;
+						}
+					}
+				}
+				
+				if(TUIO.returnBlobs().length == 1 && stars.length > 0) {	
+					
+					for(var i:Number = 0;i<stars.length; i++) {
+						switch(stars[i].type) {
+							case "finding":
+								if(HitTest.complexHitTestObject(img, stars[i].obj.dz1, 5)) {
+									Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz1.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz1.guide.rotation = -stars[i].obj.dz1.rotation;
+									(stars[i].obj as Finding).oscilateBranche1();
+				            	}
+				            	else if(HitTest.complexHitTestObject( img, stars[i].obj.dz2, 5)) {
+				            		Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz2.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz2.guide.rotation = -stars[i].obj.dz2.rotation;
+									(stars[i].obj as Finding).oscilateBranche2();
+				            	}
+				            	else if(HitTest.complexHitTestObject( img, stars[i].obj.dz3, 5)) {
+				            		Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz3.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz3.guide.rotation = -stars[i].obj.dz3.rotation;
+									(stars[i].obj as Finding).oscilateBranche3();
+				            	}
+								break;
+							case "finding1":
+								if(HitTest.complexHitTestObject(img, stars[i].obj.dz1, 5)) {
+									Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz1.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz1.guide.rotation = -stars[i].obj.dz1.rotation;
+				            	}
+				            	else if(HitTest.complexHitTestObject( img, stars[i].obj.dz2, 5)) {
+				            		Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz2.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz2.guide.rotation = -stars[i].obj.dz2.rotation;
+				            	}
+				            	else if(HitTest.complexHitTestObject( img, stars[i].obj.dz3, 5)) {
+				            		Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz3.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz3.guide.rotation = -stars[i].obj.dz3.rotation;
+				            	}	
+								break;
+							case "finding2":
+								if(HitTest.complexHitTestObject( img, stars[i].obj.dz1, 5)) {
+									Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz1.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz1.guide.rotation = -stars[i].obj.dz1.rotation;
+				            	}
+				            	else if(HitTest.complexHitTestObject( img, stars[i].obj.dz2, 5)) {
+				            		Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz2.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz2.guide.rotation = -stars[i].obj.dz2.rotation;
+				            	}
+				            	else if(HitTest.complexHitTestObject( img, stars[i].obj.dz3, 5)) {
+				            		Tweener.removeTweens(img);
+									dest.removeChild(img);
+				            		stars[i].obj.dz3.guide.addChild(img);
+				            		img.addEventListener(TouchEvent.MOUSE_DOWN, onTouchDown);
+				            		img.removeEventListener(TouchEvent.MOUSE_MOVE, onTouchMove);
+				            		img.x = -img.width/2;
+									img.y = -img.height/3;
+									stars[i].obj.dz3.guide.rotation = -stars[i].obj.dz3.rotation;
+				            	}
+								break;
+							default:
+								//Tweener.addTween(img, {x:e.currentTarget.x+100, scaleX:1, scaleY: 1, time: 2, transition:"easeOut"});
+								break;
+						}
+					}
+				}
+			}
+			
+			//when clicking on an img or star
+			private function onTouchDown(evt:TouchEvent):void {		
+				var img:UIComponent = evt.currentTarget as UIComponent;
+				img.rotation = 0;
+				
+				//add img to dest panel if if was on a star
+				if((img.toString()).indexOf("mosaic0.dest.canTop") != -1) {
+					dest.addChild(img);
+				}
+			}
+			
+			private function onTouchMove(evt:TouchEvent):void {
+				var img:UIComponent = evt.currentTarget as UIComponent;
+				img.rotation = 0;
+				bringPhotoToFront(img);
+
+				//center the finger in the middle of the picture
+				if(evt.stageX - img.width/2 > 0 && evt.stageX + img.width/2 < gWidth) {
+					img.x = evt.stageX - img.width/2;
+				}
+				
+				//if we're moving a 'star' we stay in the upper canvas
+				if(img.toString().indexOf("mosaic0.dest.Finding") > -1) {
+					if(evt.stageY - 200 > 0 && evt.stageY + 200 < lHeight) {
+						img.y = evt.stageY - img.height/2;
+					}
+				}
+				//if not we can move everywhere on the stage
+				else {
+					if(evt.stageY - img.height/2 > 0 && evt.stageY + img.height/2 < gHeight) {
+						img.y = evt.stageY - img.height/2;
+					}
+					
+					/*var newTouchItem = TUIO.returnBlobs()[0];
+					var shiftX = (newTouchItem.getTouchOldPoint().x - newTouchItem.getTouchNewPoint().x);
+					var shiftY = (newTouchItem.getTouchOldPoint().y - newTouchItem.getTouchNewPoint().y);
+					Tweener.addTween(img, {x:img.x-shiftX*7, y:img.y-shiftY*7, time:1, transition:"easeOut"});*/
+				}				
+				
+			}
+
+		
+			
+			private function drawLine():UIMovieClip {
+				var mov:UIMovieClip = new UIMovieClip();
+				var shape:Shape = new Shape();
+				shape.graphics.lineStyle(1, 0xFFFFFF);
+				shape.graphics.moveTo(0, lHeight);
+				shape.graphics.lineTo(gWidth,lHeight);
+				mov.addChild(shape);
+				return mov;
+			}
+					
+					
+			private function getCalculatedGuideX(angle:Number):Number {
+				if(angle >= 0 && angle <= 90) {
+					return Math.sin((90-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else if(angle > 90 && angle <= 180) {
+					return -Math.cos((180-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else if(angle > -180 && angle <= -90) {
+					return -Math.cos((180-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else if(angle > -90 && angle <= 0) {
+					return Math.sin((90-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else {
+					return null;
+				}
+			}
+			
+			private function getCalculatedGuideY(angle:Number):Number {
+				if(angle > 0 && angle <= 90) {
+					return Math.cos((90-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else if(angle > 90 && angle <= 180) {
+					return Math.sin((180-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else if(angle > -180 && angle <= -90) {
+					return Math.sin((180-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else if(angle > 90 && angle <= 0) {
+					return -Math.cos((90-angle) * Math.PI / 180)*finding.dz1.guide.x;
+				}
+				else {
+					return null;
+				}
+			}
+			
+			private function getRandomXPos1():Number {
+				return Math.floor(Math.random() * (1+(gWidth-510)-90)) + 90;
+			}
+			
+			private function getRandomYPos1():Number {
+				return Math.floor(Math.random() * (1+90-10)) + 10;
+			}
+
+		]]>
+	</mx:Script>
+  
+	<mx:Canvas x="0" y="0" width="{gWidth}" height="{gHeight}" id="dest"
+		borderStyle="solid" backgroundColor="#222222" 
+		verticalScrollPolicy="off"
+		horizontalScrollPolicy="off">
+	  	<mx:Canvas id="canTop" x="0" y="0" width="{gWidth}" height="{lHeight}" backgroundColor="0x000000" />
+	  	<mx:Canvas id="canBot" x="0" y="{lHeight}" width="{gWidth}" height="{gHeight-lHeight}" backgroundColor="0x333333" />
+	</mx:Canvas>
+</mx:WindowedApplication>
