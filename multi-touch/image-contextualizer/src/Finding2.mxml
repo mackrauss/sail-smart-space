@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml" width="500" height="500" xmlns:local="*">
+	<mx:Script>
+		<![CDATA[
+			import flash.utils.clearInterval;
+			import flash.utils.setInterval;
+			import mx.effects.easing.Bounce;
+			
+			private var oscillationAngle:Number = 5;
+			private var initialAngle1:Number = 0;
+			private var initialAngle2:Number = 120;
+			private var initialAngle3:Number = 240;
+			
+			[Bindable]
+            private var angle1:Number=initialAngle1;
+            
+            [Bindable]
+            private var angle2:Number=initialAngle2;
+            
+            [Bindable]
+			private var angle3:Number=initialAngle3;
+			
+	        private var interval1:Number;
+	        private var interval2:Number;
+	        private var interval3:Number;
+            private var numberOfOscillations1:Number = 0;
+            private var numberOfOscillations2:Number = 0;
+            private var numberOfOscillations3:Number = 0;
+            
+            private var increasing1:Boolean = true;
+            private var increasing2:Boolean = true;
+            private var increasing3:Boolean = true;
+            		
+			public function oscilateBranche1():void {
+				numberOfOscillations1 = 0;
+				interval1 = setInterval(rotate1, 50);
+			}
+			
+			public function oscilateBranche2():void {
+				numberOfOscillations2 = 0;
+				interval2 = setInterval(rotate2, 50);
+			}
+			
+			public function oscilateBranche3():void {
+				numberOfOscillations3 = 0;
+				interval3 = setInterval(rotate3, 50);
+			}
+			
+			private function rotate1():void {
+				if(numberOfOscillations1 < 3) {
+					if(increasing1) {
+						if(angle1 <= initialAngle1+oscillationAngle) {
+			                angle1 = angle1 + 1;
+						}
+						else {
+							increasing1 = false;
+							numberOfOscillations1++;
+						}	
+					}
+					else {
+						if(angle1 > initialAngle1+oscillationAngle) {
+			                angle1 = angle1 - 1;
+						}
+						else {
+							increasing1 = true;
+						}				
+					}	
+									
+				}
+				else {
+					clearInterval(interval1);
+					angle1 = initialAngle1;
+				}
+				
+			}
+			
+			private function rotate2():void {
+				if(numberOfOscillations2 < 3) {
+					if(increasing2) {
+						if(angle2 <= initialAngle2+oscillationAngle) {
+			                angle2 = angle2 + 1;
+						}
+						else {
+							increasing2 = false;
+							numberOfOscillations2++;
+						}	
+					}
+					else {
+						if(angle2 > initialAngle2-oscillationAngle) {
+			                angle2 = angle2 - 1;
+						}
+						else {
+							increasing2 = true;
+						}				
+					}	
+									
+				}
+				else {
+					clearInterval(interval2);
+					angle2 = initialAngle2;
+				}
+				
+			}
+			
+			private function rotate3():void {
+				if(numberOfOscillations3 < 3) {
+					if(increasing3) {
+						if(angle3 <= initialAngle3+oscillationAngle) {
+			                angle3 = angle3 + 1;
+						}
+						else {
+							increasing3 = false;
+							numberOfOscillations3++;
+						}	
+					}
+					else {
+						if(angle3 > initialAngle3-oscillationAngle) {
+			                angle3 = angle3 - 1;
+						}
+						else {
+							increasing3 = true;
+						}				
+					}	
+									
+				}
+				else {
+					clearInterval(interval3);
+					angle3 = initialAngle3;
+				}
+				
+			}
+		]]>
+	</mx:Script>
+	
+	<mx:Style>
+		.mypanelTitle {
+			color: #ffffff;
+			fontFamily: Arial;
+		   	fontSize: 18;
+		}
+	</mx:Style>
+	
+	
+	<local:DropZone id="dz1" x="250" y="250" rotation="{angle1}"/>
+	<local:DropZone id="dz2" x="250" y="250" rotation="{angle2}"/>
+	<local:DropZone id="dz3" x="250" y="250" rotation="{angle3}"/>
+	<mx:Image id="k1" source="@Embed('assets/relieffspenne1.jpg')" x="170" y="150"/>
+	<mx:Image id="k2" source="@Embed('assets/relieffspenne2.jpg')" x="{k1.x+60}" y="{k1.y+60}"/>
+	<mx:Image id="k3" source="@Embed('assets/relieffspenne3.jpg')" x="{k1.x+60}" y="{k1.y+60}"/>
+	<mx:Text id="txt" text="RELIEFFSPENNE" styleName="mypanelTitle" x="{k1.x-txt.width-10}" y="{k1.y+40}"/>
+</mx:Canvas>
