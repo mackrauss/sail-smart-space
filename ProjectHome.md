@@ -1,0 +1,1 @@
+SAIL Smart Space is an open source configurable "smart room in a box that will hopefully allow a community of researchers to share and exchange approaches that work as well as core software code - thus serving to advance this nascent area of research.
